@@ -1,33 +1,99 @@
-
-// liveUpdateDlg.cpp : ÊµÏÖÎÄ¼ş
+ï»¿
+// liveUpdateDlg.cpp : å®ç°æ–‡ä»¶
 //
 
 #include "stdafx.h"
 #include "liveUpdate.h"
 #include "liveUpdateDlg.h"
 #include "afxdialogex.h"
+#include  <afxinet.h>
+#include "BindStatusCallback.h"
+
+#pragma comment(lib,"Shlwapi.lib") //å¦‚æœæ²¡æœ‰è¿™è¡Œï¼Œä¼šå‡ºç°linké”™è¯¯
+
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+const CString FLAG_PATH = _T("C:\\Program Files (x86)\\burster\\flag");
 
-// ÓÃÓÚÓ¦ÓÃ³ÌĞò¡°¹ØÓÚ¡±²Ëµ¥ÏîµÄ CAboutDlg ¶Ô»°¿ò
+//è·å–appå®‰è£…è·¯å¾„
+CString GetAppPath()
+{
+	//æœ¬ç¨‹åºå®‰è£…è·¯å¾„
+	CString appPath;
+	GetModuleFileName(NULL, appPath.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+	appPath.ReleaseBuffer();
+	int pos = appPath.ReverseFind('\\');
+	appPath = appPath.Left(pos);
+	return appPath;
+}
 
+//åˆ é™¤ä¸´æ—¶æ–‡ä»¶
+void DeleteTempFile(CString fileName)
+{
+	if (PathFileExists(fileName))
+	{
+		//åˆ é™¤
+		CFile tempFile;
+		tempFile.Remove(fileName);
+	}
+}
+
+//ä¸‹è½½è¿œç¨‹æ–‡ä»¶
+UINT downRemoteFile(LPVOID lpParam)
+{
+	//ä¸»ç¨‹åºå®‰è£…è·¯å¾„
+	CString appPath = GetAppPath();
+	CString mainAppPath = appPath + _T("\\Burster.exe.temp");
+
+	CCallback callBack;
+	callBack.m_bUseTimeout = FALSE;
+	callBack.m_MainDlg = (CliveUpdateDlg*)(AfxGetApp()->GetMainWnd());
+
+	CString szUrl;
+	szUrl.Format("http://129.226.48.122/burster/Burster.exe?abc=%d", time(NULL)); // ç”ŸæˆéšæœºURL
+	HRESULT  ret = URLDownloadToFile(NULL, szUrl, mainAppPath, 0, &callBack);
+	if (S_OK == ret)//ä¸‹è½½å®Œæ¯•
+	{
+		//åˆ é™¤æ—§æ–‡ä»¶
+		DeleteTempFile(appPath + _T("\\Burster.exe"));
+
+		//æ”¹å
+		CFile::Rename(mainAppPath, appPath + _T("\\Burster.exe"));
+
+		//éšè—æœ¬ç¨‹åº
+		callBack.m_MainDlg->ShowWindow(FALSE);
+
+		//å¯åŠ¨
+		WinExec(appPath + _T("\\Burster.exe"), WM_SHOWWINDOW);
+	}
+	else
+		MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("æ›´æ–°å¤±è´¥"), _T("æç¤º"), MB_OK);
+
+	//é€€å‡ºæœ¬ç¨‹åº
+	callBack.m_MainDlg->SendMessage(WM_CLOSE);
+	return 0;
+}
+
+
+// ç”¨äºåº”ç”¨ç¨‹åºâ€œå…³äºâ€èœå•é¡¹çš„ CAboutDlg å¯¹è¯æ¡†
 class CAboutDlg : public CDialogEx
 {
 public:
 	CAboutDlg();
 
-// ¶Ô»°¿òÊı¾İ
+	// å¯¹è¯æ¡†æ•°æ®
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§³Ö
+protected:
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV æ”¯æŒ
 
-// ÊµÏÖ
+// å®ç°
 protected:
 	DECLARE_MESSAGE_MAP()
 };
@@ -45,7 +111,7 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CliveUpdateDlg ¶Ô»°¿ò
+// CliveUpdateDlg å¯¹è¯æ¡†
 
 
 
@@ -58,24 +124,36 @@ CliveUpdateDlg::CliveUpdateDlg(CWnd* pParent /*=NULL*/)
 void CliveUpdateDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_PROGRESS1, m_DownProgress);
+	DDX_Control(pDX, ID_STATIC, m_OutPut);
 }
 
 BEGIN_MESSAGE_MAP(CliveUpdateDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDOK, &CliveUpdateDlg::OnBnClickedOk)
+	ON_WM_TIMER()
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
-// CliveUpdateDlg ÏûÏ¢´¦Àí³ÌĞò
+// CliveUpdateDlg æ¶ˆæ¯å¤„ç†ç¨‹åº
 
 BOOL CliveUpdateDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// ½«¡°¹ØÓÚ...¡±²Ëµ¥ÏîÌí¼Óµ½ÏµÍ³²Ëµ¥ÖĞ¡£
+	::CreateMutex(NULL, TRUE, "åˆ†ç»„å™¨è‡ªåŠ¨æ›´æ–°ç¨‹åº");//å­—ç¬¦ä¸²é‡Œé¢çš„å†…å®¹å¯ä»¥éšä¾¿æ”¹.ä»–åªæ˜¯ä¸€ä¸ªåå­—
+	if (GetLastError() == ERROR_ALREADY_EXISTS || !PathFileExists(FLAG_PATH))
+	{
+		exit(0);
+		return false;
+	}
 
-	// IDM_ABOUTBOX ±ØĞëÔÚÏµÍ³ÃüÁî·¶Î§ÄÚ¡£
+	// å°†â€œå…³äº...â€èœå•é¡¹æ·»åŠ åˆ°ç³»ç»Ÿèœå•ä¸­ã€‚
+
+	// IDM_ABOUTBOX å¿…é¡»åœ¨ç³»ç»Ÿå‘½ä»¤èŒƒå›´å†…ã€‚
 	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
 	ASSERT(IDM_ABOUTBOX < 0xF000);
 
@@ -93,15 +171,19 @@ BOOL CliveUpdateDlg::OnInitDialog()
 		}
 	}
 
-	// ÉèÖÃ´Ë¶Ô»°¿òµÄÍ¼±ê¡£  µ±Ó¦ÓÃ³ÌĞòÖ÷´°¿Ú²»ÊÇ¶Ô»°¿òÊ±£¬¿ò¼Ü½«×Ô¶¯
-	//  Ö´ĞĞ´Ë²Ù×÷
-	SetIcon(m_hIcon, TRUE);			// ÉèÖÃ´óÍ¼±ê
-	SetIcon(m_hIcon, FALSE);		// ÉèÖÃĞ¡Í¼±ê
+	m_pThread = AfxBeginThread(downRemoteFile, this);
 
-	// TODO: ÔÚ´ËÌí¼Ó¶îÍâµÄ³õÊ¼»¯´úÂë
+	// è®¾ç½®æ­¤å¯¹è¯æ¡†çš„å›¾æ ‡ã€‚  å½“åº”ç”¨ç¨‹åºä¸»çª—å£ä¸æ˜¯å¯¹è¯æ¡†æ—¶ï¼Œæ¡†æ¶å°†è‡ªåŠ¨
+	//  æ‰§è¡Œæ­¤æ“ä½œ
+	SetIcon(m_hIcon, TRUE);			// è®¾ç½®å¤§å›¾æ ‡
+	SetIcon(m_hIcon, FALSE);		// è®¾ç½®å°å›¾æ ‡
 
-	return TRUE;  // ³ı·Ç½«½¹µãÉèÖÃµ½¿Ø¼ş£¬·ñÔò·µ»Ø TRUE
+	// TODO: åœ¨æ­¤æ·»åŠ é¢å¤–çš„åˆå§‹åŒ–ä»£ç 
+
+	return TRUE;  // é™¤éå°†ç„¦ç‚¹è®¾ç½®åˆ°æ§ä»¶ï¼Œå¦åˆ™è¿”å› TRUE
 }
+
+
 
 void CliveUpdateDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
@@ -116,19 +198,19 @@ void CliveUpdateDlg::OnSysCommand(UINT nID, LPARAM lParam)
 	}
 }
 
-// Èç¹ûÏò¶Ô»°¿òÌí¼Ó×îĞ¡»¯°´Å¥£¬ÔòĞèÒªÏÂÃæµÄ´úÂë
-//  À´»æÖÆ¸ÃÍ¼±ê¡£  ¶ÔÓÚÊ¹ÓÃÎÄµµ/ÊÓÍ¼Ä£ĞÍµÄ MFC Ó¦ÓÃ³ÌĞò£¬
-//  Õâ½«ÓÉ¿ò¼Ü×Ô¶¯Íê³É¡£
+// å¦‚æœå‘å¯¹è¯æ¡†æ·»åŠ æœ€å°åŒ–æŒ‰é’®ï¼Œåˆ™éœ€è¦ä¸‹é¢çš„ä»£ç 
+//  æ¥ç»˜åˆ¶è¯¥å›¾æ ‡ã€‚  å¯¹äºä½¿ç”¨æ–‡æ¡£/è§†å›¾æ¨¡å‹çš„ MFC åº”ç”¨ç¨‹åºï¼Œ
+//  è¿™å°†ç”±æ¡†æ¶è‡ªåŠ¨å®Œæˆã€‚
 
 void CliveUpdateDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // ÓÃÓÚ»æÖÆµÄÉè±¸ÉÏÏÂÎÄ
+		CPaintDC dc(this); // ç”¨äºç»˜åˆ¶çš„è®¾å¤‡ä¸Šä¸‹æ–‡
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// Ê¹Í¼±êÔÚ¹¤×÷Çø¾ØĞÎÖĞ¾ÓÖĞ
+		// ä½¿å›¾æ ‡åœ¨å·¥ä½œåŒºçŸ©å½¢ä¸­å±…ä¸­
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -136,7 +218,7 @@ void CliveUpdateDlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// »æÖÆÍ¼±ê
+		// ç»˜åˆ¶å›¾æ ‡
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -145,10 +227,33 @@ void CliveUpdateDlg::OnPaint()
 	}
 }
 
-//µ±ÓÃ»§ÍÏ¶¯×îĞ¡»¯´°¿ÚÊ±ÏµÍ³µ÷ÓÃ´Ëº¯ÊıÈ¡µÃ¹â±ê
-//ÏÔÊ¾¡£
+//å½“ç”¨æˆ·æ‹–åŠ¨æœ€å°åŒ–çª—å£æ—¶ç³»ç»Ÿè°ƒç”¨æ­¤å‡½æ•°å–å¾—å…‰æ ‡
+//æ˜¾ç¤ºã€‚
 HCURSOR CliveUpdateDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+//ä¸‹è½½
+void CliveUpdateDlg::OnBnClickedOk()
+{
+
+}
+
+void CliveUpdateDlg::OnClose()
+{
+	// TODO: åœ¨æ­¤æ·»åŠ æ¶ˆæ¯å¤„ç†ç¨‹åºä»£ç å’Œ/æˆ–è°ƒç”¨é»˜è®¤å€¼
+	/*if (m_pThread)
+	{
+		TerminateThread(m_pThread, 1);
+		delete m_pThread;
+		m_pThread = NULL;
+	}*/
+
+	//åˆ é™¤ä¸´æ—¶æ–‡ä»¶
+	CString appPath = GetAppPath();
+	DeleteTempFile(appPath + _T("\\Burster.exe.temp"));
+	
+	CDialogEx::OnClose();
+}

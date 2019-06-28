@@ -1,34 +1,44 @@
-
-// liveUpdateDlg.h : Í·ÎÄ¼ş
+ï»¿
+// liveUpdateDlg.h : å¤´æ–‡ä»¶
 //
 
 #pragma once
+#include "afxcmn.h"
+#include "afxwin.h"
 
-
-// CliveUpdateDlg ¶Ô»°¿ò
+// CliveUpdateDlg å¯¹è¯æ¡†
 class CliveUpdateDlg : public CDialogEx
 {
-// ¹¹Ôì
+// æ„é€ 
 public:
-	CliveUpdateDlg(CWnd* pParent = NULL);	// ±ê×¼¹¹Ôìº¯Êı
+	CliveUpdateDlg(CWnd* pParent = NULL);	// æ ‡å‡†æ„é€ å‡½æ•°
 
-// ¶Ô»°¿òÊı¾İ
+// å¯¹è¯æ¡†æ•°æ®
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_LIVEUPDATE_DIALOG };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV Ö§³Ö
+	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV æ”¯æŒ
+
+	CWinThread*	m_pThread;
 
 
-// ÊµÏÖ
+
+// å®ç°
 protected:
 	HICON m_hIcon;
 
-	// Éú³ÉµÄÏûÏ¢Ó³Éäº¯Êı
+	// ç”Ÿæˆçš„æ¶ˆæ¯æ˜ å°„å‡½æ•°
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnBnClickedOk();
+	// ä¸‹è½½è¿›åº¦
+	CProgressCtrl m_DownProgress;
+	afx_msg void OnClose();
+	CStatic m_OutPut;
 };
