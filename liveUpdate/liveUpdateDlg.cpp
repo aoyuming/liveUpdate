@@ -11,13 +11,10 @@
 
 #pragma comment(lib,"Shlwapi.lib") //如果没有这行，会出现link错误
 
-
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-const CString FLAG_PATH = _T("C:\\Program Files (x86)\\burster\\flag");
 
 //获取app安装路径
 CString GetAppPath()
@@ -48,14 +45,29 @@ UINT downRemoteFile(LPVOID lpParam)
 	//主程序安装路径
 	CString appPath = GetAppPath();
 	CString mainAppPath = appPath + _T("\\Burster.exe.temp");
+	CString versionPath = appPath + _T("\\version.txt");
 
 	CCallback callBack;
 	callBack.m_bUseTimeout = FALSE;
 	callBack.m_MainDlg = (CliveUpdateDlg*)(AfxGetApp()->GetMainWnd());
 
+	//加载本地文件
+	CString bursterRemoteUrl, updateMsg;
+	FILE* file = NULL;
+	fopen_s(&file, versionPath, "rb");
+	if (NULL == file)
+		return MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("更新失败, 本地没有配置文件"), _T("提示"), MB_OK);
+
+	char buf[64];
+	fscanf_s(file, "远程分组器地址=%s", buf, 64);
+	fclose(file);
+
 	CString szUrl;
-	szUrl.Format("http://129.226.48.122/burster/Burster.exe?abc=%d", time(NULL)); // 生成随机URL
-	HRESULT  ret = URLDownloadToFile(NULL, szUrl, mainAppPath, 0, &callBack);
+	szUrl.Format(_T("?abc=%d"), time(NULL)); // 生成随机URL
+	bursterRemoteUrl = buf;
+	bursterRemoteUrl += szUrl;
+	HRESULT ret = URLDownloadToFile(NULL, bursterRemoteUrl, mainAppPath, 0, &callBack);
+
 	if (S_OK == ret)//下载完毕
 	{
 		//删除旧文件
@@ -71,7 +83,9 @@ UINT downRemoteFile(LPVOID lpParam)
 		WinExec(appPath + _T("\\Burster.exe"), WM_SHOWWINDOW);
 	}
 	else
-		MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("更新失败"), _T("提示"), MB_OK);
+	{
+		MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("下载远程文件失败"), _T("提示"), MB_OK);
+	}
 
 	//退出本程序
 	callBack.m_MainDlg->SendMessage(WM_CLOSE);
@@ -145,11 +159,44 @@ BOOL CliveUpdateDlg::OnInitDialog()
 	CDialogEx::OnInitDialog();
 
 	::CreateMutex(NULL, TRUE, "分组器自动更新程序");//字符串里面的内容可以随便改.他只是一个名字
-	if (GetLastError() == ERROR_ALREADY_EXISTS || !PathFileExists(FLAG_PATH))
+	if (GetLastError() == ERROR_ALREADY_EXISTS)
 	{
 		exit(0);
 		return false;
 	}
+
+	/*CWnd* cwnd = FindWindow(_T("fzq"), NULL);
+	if (!cwnd)
+	{
+		exit(0);
+		return false;
+	}*/
+
+	//获取命令行参数 如果不是调用程序特定传入的参数“-XXXX”，则停止运行 2010/1/17
+	/////////////////////////////////////////////////////////////////////////
+	int CommandLineCount = 0;
+	LPWSTR * m_lpCommandLine = ::CommandLineToArgvW(GetCommandLineW(), &CommandLineCount);
+	BOOL result = FALSE;
+	CString cmdStr;
+	//获取参数行命令，并将UNICODE转化成ASCI进行判断
+	for (int i = CommandLineCount - 1; i >= 0; i--)
+	{
+		cmdStr = m_lpCommandLine[i];
+		if (cmdStr == _T("fzq_com"))
+		{
+			result = TRUE;
+			break;
+		}
+	}
+
+	//释放内存
+	GlobalFree(HGLOBAL(m_lpCommandLine));
+	if (!result)
+	{
+		exit(0);
+		return FALSE;
+	}
+
 
 	// 将“关于...”菜单项添加到系统菜单中。
 
