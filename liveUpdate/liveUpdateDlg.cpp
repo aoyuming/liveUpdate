@@ -8,6 +8,7 @@
 #include "afxdialogex.h"
 #include  <afxinet.h>
 #include "BindStatusCallback.h"
+#include <assert.h>
 
 #pragma comment(lib,"Shlwapi.lib") //如果没有这行，会出现link错误
 
@@ -42,53 +43,53 @@ void DeleteTempFile(CString fileName)
 //下载远程文件
 UINT downRemoteFile(LPVOID lpParam)
 {
-	//主程序安装路径
-	CString appPath = GetAppPath();
-	CString mainAppPath = appPath + _T("\\Burster.exe.temp");
-	CString versionPath = appPath + _T("\\version.txt");
+	////主程序安装路径
+	//CString appPath = GetAppPath();
+	//CString mainAppPath = appPath + _T("\\Burster.exe.temp");
+	//CString versionPath = appPath + _T("\\version.txt");
 
-	CCallback callBack;
-	callBack.m_bUseTimeout = FALSE;
-	callBack.m_MainDlg = (CliveUpdateDlg*)(AfxGetApp()->GetMainWnd());
+	//CCallback callBack;
+	//callBack.m_bUseTimeout = FALSE;
+	//callBack.m_MainDlg = (CliveUpdateDlg*)(AfxGetApp()->GetMainWnd());
 
-	//加载本地文件
-	CString bursterRemoteUrl, updateMsg;
-	FILE* file = NULL;
-	fopen_s(&file, versionPath, "rb");
-	if (NULL == file)
-		return MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("更新失败, 本地没有配置文件"), _T("提示"), MB_OK);
+	////加载本地文件
+	//CString bursterRemoteUrl, updateMsg;
+	//FILE* file = NULL;
+	//fopen_s(&file, versionPath, "rb");
+	//if (NULL == file)
+	//	return MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("更新失败, 本地没有配置文件"), _T("提示"), MB_OK);
 
-	char buf[64];
-	fscanf_s(file, "远程分组器地址=%s", buf, 64);
-	fclose(file);
+	//char buf[64];
+	//fscanf_s(file, "远程分组器地址=%s", buf, 64);
+	//fclose(file);
 
-	CString szUrl;
-	szUrl.Format(_T("?abc=%d"), time(NULL)); // 生成随机URL
-	bursterRemoteUrl = buf;
-	bursterRemoteUrl += szUrl;
-	HRESULT ret = URLDownloadToFile(NULL, bursterRemoteUrl, mainAppPath, 0, &callBack);
+	//CString szUrl;
+	//szUrl.Format(_T("?abc=%d"), time(NULL)); // 生成随机URL
+	//bursterRemoteUrl = buf;
+	//bursterRemoteUrl += szUrl;
+	//HRESULT ret = URLDownloadToFile(NULL, bursterRemoteUrl, mainAppPath, 0, &callBack);
 
-	if (S_OK == ret)//下载完毕
-	{
-		//删除旧文件
-		DeleteTempFile(appPath + _T("\\Burster.exe"));
+	//if (S_OK == ret)//下载完毕
+	//{
+	//	//删除旧文件
+	//	DeleteTempFile(appPath + _T("\\Burster.exe"));
 
-		//改名
-		CFile::Rename(mainAppPath, appPath + _T("\\Burster.exe"));
+	//	//改名
+	//	CFile::Rename(mainAppPath, appPath + _T("\\Burster.exe"));
 
-		//隐藏本程序
-		callBack.m_MainDlg->ShowWindow(FALSE);
+	//	//隐藏本程序
+	//	callBack.m_MainDlg->ShowWindow(FALSE);
 
-		//启动
-		WinExec(appPath + _T("\\Burster.exe"), WM_SHOWWINDOW);
-	}
-	else
-	{
-		MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("下载远程文件失败"), _T("提示"), MB_OK);
-	}
+	//	//启动
+	//	WinExec(appPath + _T("\\Burster.exe"), WM_SHOWWINDOW);
+	//}
+	//else
+	//{
+	//	MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("下载远程文件失败"), _T("提示"), MB_OK);
+	//}
 
-	//退出本程序
-	callBack.m_MainDlg->SendMessage(WM_CLOSE);
+	////退出本程序
+	//callBack.m_MainDlg->SendMessage(WM_CLOSE);
 	return 0;
 }
 
@@ -165,37 +166,36 @@ BOOL CliveUpdateDlg::OnInitDialog()
 		return false;
 	}
 
-	/*CWnd* cwnd = FindWindow(_T("fzq"), NULL);
-	if (!cwnd)
-	{
-		exit(0);
-		return false;
-	}*/
-
-	//获取命令行参数 如果不是调用程序特定传入的参数“-XXXX”，则停止运行 2010/1/17
-	/////////////////////////////////////////////////////////////////////////
-	int CommandLineCount = 0;
-	LPWSTR * m_lpCommandLine = ::CommandLineToArgvW(GetCommandLineW(), &CommandLineCount);
-	BOOL result = FALSE;
-	CString cmdStr;
-	//获取参数行命令，并将UNICODE转化成ASCI进行判断
-	for (int i = CommandLineCount - 1; i >= 0; i--)
-	{
-		cmdStr = m_lpCommandLine[i];
-		if (cmdStr == _T("fzq_com"))
-		{
-			result = TRUE;
-			break;
-		}
-	}
-
-	//释放内存
-	GlobalFree(HGLOBAL(m_lpCommandLine));
-	if (!result)
-	{
-		exit(0);
+	if (!LoadProjectManifest(_T("project.manifest")))
 		return FALSE;
-	}
+
+	//生成差异文件列表
+	createDownList(m_LoaclAllFileVect, m_DownFileVect);
+
+
+	////获取命令行参数 如果不是调用程序特定传入的参数“-XXXX”，则停止运行 2010/1/17
+	//int CommandLineCount = 0;
+	//LPWSTR * m_lpCommandLine = ::CommandLineToArgvW(GetCommandLineW(), &CommandLineCount);
+	//BOOL result = FALSE;
+	//CString cmdStr;
+	////获取参数行命令，并将UNICODE转化成ASCI进行判断
+	//for (int i = CommandLineCount - 1; i >= 0; i--)
+	//{
+	//	cmdStr = m_lpCommandLine[i];
+	//	if (cmdStr == m_LaunchParameters || m_LaunchParameters == _T("null"))//是否是启动参数
+	//	{
+	//		result = TRUE;
+	//		break;
+	//	}
+	//}
+
+	////释放内存
+	//GlobalFree(HGLOBAL(m_lpCommandLine));
+	//if (!result)
+	//{
+	//	exit(0);
+	//	return FALSE;
+	//}
 
 
 	// 将“关于...”菜单项添加到系统菜单中。
@@ -230,6 +230,176 @@ BOOL CliveUpdateDlg::OnInitDialog()
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
+//比较版本信息 
+int CliveUpdateDlg::compareVersion(int v1, int v2, int v3, int v4, int v5, int v6)
+{
+	int version1 = v1 * 100 + v2 * 10 + v3;
+	int version2 = v4 * 100 + v5 * 10 + v6;
+	return version1 - version2;
+}
+
+//生成下载列表
+void CliveUpdateDlg::createDownList(const vector<NODE>& localVect, std::vector<NODE>& downVect)
+{
+	vector<NODE> diff;
+	CString appPath = GetAppPath();
+
+	//对比版本号
+	//1：加载本地版本号
+	FILE* pf = NULL;
+	fopen_s(&pf, appPath + _T("\\version.manifest"), "rb");
+	if (!pf)
+		return;
+
+	int v1, v2, v3;
+	fscanf_s(pf, _T("版本:%d.%d.%d"), &v1, &v2, &v3);
+	fclose(pf);
+
+	//远程文件下载下来 存放的路径
+	CString verTemp = appPath + _T("\\DownTemp\\version.manifest");
+	CString proTemp = appPath + _T("\\DownTemp\\project.manifest");
+
+	//如果没有该文件夹，就创建
+	if (!PathFileExists(appPath + _T("\\DownTemp")))
+		CreateDirectory(appPath + _T("\\DownTemp"), NULL);
+
+	//下载远程version文件
+	HRESULT ret = URLDownloadToFile(NULL, m_VersionUrl, verTemp,0, NULL);
+
+	if (S_OK == ret)//下载完毕
+	{
+		//读取
+		pf = NULL;
+		fopen_s(&pf, verTemp, "rb");
+		if (!pf)
+			return;
+
+		int v4, v5, v6;
+		fscanf_s(pf, _T("版本:%d.%d.%d"), &v4, &v5, &v6);
+		fclose(pf);
+
+		if (compareVersion(v1, v2, v3, v4, v5, v6) < 0)
+		{
+			//读取新版本更新的东西
+			CFile file;
+			if (file.Open(verTemp, CFile::modeRead))
+			{
+				char* buf = new char[file.GetLength() + 1];
+				file.Read(buf, file.GetLength());
+				buf[file.GetLength()] = 0;
+				file.Close();
+				m_UpdateMsg = buf;
+				delete []buf;
+			}
+
+
+			//读取远程文件列表信息
+			ret = URLDownloadToFile(NULL, m_ProjectUrl, proTemp, 0, NULL);
+			if (S_OK == ret)//下载完毕
+			{
+				//读取
+				pf = NULL;
+				fopen_s(&pf, proTemp, "rb");
+				if (!pf)
+					return;
+
+				char buf[5][64];
+				int count = 0;
+				fscanf_s(pf, _T("远程packageUrl地址:%s"), buf[0], 64);
+				fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 64);
+				fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 64);
+				fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[3], 64);
+				fscanf_s(pf, _T("\r\n启动参数:%s"), buf[4], 64);
+				fscanf_s(pf, _T("\r\n清单文件数量:%d"), &count);
+
+				//远程文件信息列表
+				vector<NODE> remoteVect;
+				for (int i = 0; i < count; ++i)
+				{
+					NODE node;
+					char buff[2][64];
+					fscanf_s(pf, _T("\r\n文件url:%s"), buff[0], 64);
+					fscanf_s(pf, _T("\r\nMd5:%s"), buff[1], 64);
+					fscanf_s(pf, _T("\r\nSize:%d"), &node.size);
+					node.fileUrl = buff[0];
+					node.md5 = buff[1];
+					remoteVect.push_back(node);
+				}
+
+				//比较差异
+				for (int i = 0; i < (int)remoteVect.size(); ++i)
+				{
+					BOOL down = TRUE;
+					for (int j = 0; j < (int)localVect.size(); ++j)
+					{
+						if (remoteVect[i].fileUrl == localVect[j].fileUrl)
+						{
+							if (remoteVect[i].md5 == localVect[j].md5)
+								down = FALSE;
+							break;
+						}
+					}
+
+					//下载
+					if (down)
+					{
+						downVect.push_back(remoteVect[i]);
+					}
+				}
+
+				fclose(pf);
+			}
+		}
+	}
+	else
+	{
+		MessageBox( _T("下载远程文件失败"), _T("提示"), MB_OK);
+	}
+}
+
+//加载项目配置文件
+BOOL CliveUpdateDlg::LoadProjectManifest(CString filePath)
+{
+	CString appPath = GetAppPath();
+	FILE* pf = NULL;
+	fopen_s(&pf, appPath + _T('\\') + filePath, "rb");
+	if (NULL == pf)
+	{
+		MessageBox(_T("加载配置文件失败"));
+		SendMessage(WM_CLOSE);
+		return FALSE;
+	}
+
+	char buf[5][64];
+	fscanf_s(pf, _T("远程packageUrl地址:%s"), buf[0], 64);
+	fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 64);
+	fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 64);
+	fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[3], 64);
+	fscanf_s(pf, _T("\r\n启动参数:%s"), buf[4], 64);
+	fscanf_s(pf, _T("\r\n清单文件数量:%d"), &m_DetailedCount);
+
+	m_PackUrl = buf[0];
+	m_ProjectUrl = buf[1];
+	m_VersionUrl = buf[2];
+	m_Name = buf[3];
+	m_LaunchParameters = buf[4];
+
+	for (int i = 0; i < (int)m_DetailedCount; ++i)
+	{
+		NODE node;
+		char buff[2][64];
+		fscanf_s(pf, _T("\r\n文件url:%s"), buff[0], 64);
+		fscanf_s(pf, _T("\r\nMd5:%s"), buff[1], 64);
+		fscanf_s(pf, _T("\r\nSize:%d"), &node.size);
+		node.fileUrl = buff[0];
+		node.md5 = buff[1];
+		m_LoaclAllFileVect.push_back(node);
+	}
+
+	//关闭文件
+	fclose(pf);
+	return TRUE;
+}
 
 
 void CliveUpdateDlg::OnSysCommand(UINT nID, LPARAM lParam)
