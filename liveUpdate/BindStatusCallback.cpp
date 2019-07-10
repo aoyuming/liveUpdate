@@ -39,13 +39,16 @@ HRESULT CCallback::OnProgress ( ULONG ulProgress,   ULONG ulProgressMax,
 
 	if (ulProgress != 0 && ulProgressMax != 0)
 	{
-		int pro = int(100.0 * ulProgress / ulProgressMax);
+		int pro = int(100.0 * (g_CurDownByte + ulProgress) / g_DownAllFileSize);
 		m_MainDlg->m_DownProgress.SetPos(pro);
 
 		CString s1 = "更新中：";
 		CString s2;
-		s2.Format("%d", pro);
+		s2.Format("%d", (pro < 100 ? pro : 100));
 		m_MainDlg->m_OutPut.SetWindowText(s1 + s2 + _T("%"));
+
+		if (ulProgress >= ulProgressMax)
+			g_CurDownByte += ulProgress;
 	}
 
     // Has the timeout period elapsed? 超时停止下载

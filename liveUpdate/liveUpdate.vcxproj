@@ -190,13 +190,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BindStatusCallback.h" />
+    <ClInclude Include="global.h" />
     <ClInclude Include="liveUpdateDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="VersionDlg.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BindStatusCallback.cpp" />
+    <ClCompile Include="global.cpp" />
     <ClCompile Include="liveUpdate.cpp" />
     <ClCompile Include="liveUpdateDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -205,6 +208,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="VersionDlg.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="liveUpdate.rc" />

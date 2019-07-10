@@ -9,6 +9,7 @@
 #include  <afxinet.h>
 #include "BindStatusCallback.h"
 #include <assert.h>
+#include "VersionDlg.h"
 
 #pragma comment(lib,"Shlwapi.lib") //如果没有这行，会出现link错误
 
@@ -16,82 +17,13 @@
 #define new DEBUG_NEW
 #endif
 
+#define DEFAULT_PROJECT_URL _T("http://129.226.48.122/burster/test/project.manifest")
+#define DEFAULT_VERSION_URL _T("http://129.226.48.122/burster/test/version.manifest")
+#define DEFAULT_PACK_URL _T("http://129.226.48.122/burster/test/")
+#define DEFAULT_TOKEN _T("fzq_update")
+#define DEFAULT_EXENAME _T("Burster.exe")
+#define DEFAULT_CLASSNAME _T("fzq")
 
-//获取app安装路径
-CString GetAppPath()
-{
-	//本程序安装路径
-	CString appPath;
-	GetModuleFileName(NULL, appPath.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
-	appPath.ReleaseBuffer();
-	int pos = appPath.ReverseFind('\\');
-	appPath = appPath.Left(pos);
-	return appPath;
-}
-
-//删除临时文件
-void DeleteTempFile(CString fileName)
-{
-	if (PathFileExists(fileName))
-	{
-		//删除
-		CFile tempFile;
-		tempFile.Remove(fileName);
-	}
-}
-
-//下载远程文件
-UINT downRemoteFile(LPVOID lpParam)
-{
-	////主程序安装路径
-	//CString appPath = GetAppPath();
-	//CString mainAppPath = appPath + _T("\\Burster.exe.temp");
-	//CString versionPath = appPath + _T("\\version.txt");
-
-	//CCallback callBack;
-	//callBack.m_bUseTimeout = FALSE;
-	//callBack.m_MainDlg = (CliveUpdateDlg*)(AfxGetApp()->GetMainWnd());
-
-	////加载本地文件
-	//CString bursterRemoteUrl, updateMsg;
-	//FILE* file = NULL;
-	//fopen_s(&file, versionPath, "rb");
-	//if (NULL == file)
-	//	return MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("更新失败, 本地没有配置文件"), _T("提示"), MB_OK);
-
-	//char buf[64];
-	//fscanf_s(file, "远程分组器地址=%s", buf, 64);
-	//fclose(file);
-
-	//CString szUrl;
-	//szUrl.Format(_T("?abc=%d"), time(NULL)); // 生成随机URL
-	//bursterRemoteUrl = buf;
-	//bursterRemoteUrl += szUrl;
-	//HRESULT ret = URLDownloadToFile(NULL, bursterRemoteUrl, mainAppPath, 0, &callBack);
-
-	//if (S_OK == ret)//下载完毕
-	//{
-	//	//删除旧文件
-	//	DeleteTempFile(appPath + _T("\\Burster.exe"));
-
-	//	//改名
-	//	CFile::Rename(mainAppPath, appPath + _T("\\Burster.exe"));
-
-	//	//隐藏本程序
-	//	callBack.m_MainDlg->ShowWindow(FALSE);
-
-	//	//启动
-	//	WinExec(appPath + _T("\\Burster.exe"), WM_SHOWWINDOW);
-	//}
-	//else
-	//{
-	//	MessageBox(AfxGetApp()->GetMainWnd()->m_hWnd, _T("下载远程文件失败"), _T("提示"), MB_OK);
-	//}
-
-	////退出本程序
-	//callBack.m_MainDlg->SendMessage(WM_CLOSE);
-	return 0;
-}
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -128,8 +60,6 @@ END_MESSAGE_MAP()
 
 // CliveUpdateDlg 对话框
 
-
-
 CliveUpdateDlg::CliveUpdateDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_LIVEUPDATE_DIALOG, pParent)
 {
@@ -163,42 +93,102 @@ BOOL CliveUpdateDlg::OnInitDialog()
 	if (GetLastError() == ERROR_ALREADY_EXISTS)
 	{
 		exit(0);
-		return false;
+		return FALSE;
 	}
 
-	if (!LoadProjectManifest(_T("project.manifest")))
+	m_ProjectUrl = DEFAULT_PROJECT_URL;
+	m_VersionUrl = DEFAULT_VERSION_URL;
+	m_PackUrl = DEFAULT_PACK_URL;
+	m_LaunchToken = DEFAULT_TOKEN;
+	m_MainExeFileName = DEFAULT_EXENAME;
+	m_MainWindowClassName = DEFAULT_CLASSNAME;
+
+	//读取配置文件信息
+	CString appPath = GetAppPath();
+	LoadProjectManifest(appPath + _T("\\project.manifest"), m_LoaclAllFileVect);
+	
+	//获取命令行参数 如果不是调用程序特定传入的参数“-XXXX”，则停止运行
+	int CommandLineCount = 0;
+	LPWSTR * m_lpCommandLine = ::CommandLineToArgvW(GetCommandLineW(), &CommandLineCount);
+	BOOL result = FALSE;
+	CString cmdStr;
+	CString className = _T(""), token = _T("");
+
+	//获取参数行命令，并将UNICODE转化成ASCI进行判断
+	for (int i = CommandLineCount - 1; i >= 0; i--)
+	{
+		cmdStr = m_lpCommandLine[i];
+
+		int begin = cmdStr.Find("token:");
+		int end = cmdStr.Find('|');
+		if (end != -1 && begin != -1)
+		{
+			token = cmdStr.Left(end);
+			token = token.Right(token.GetLength() - strlen("token:"));
+			if (token == m_LaunchToken)
+				result = TRUE;
+		}
+
+		begin = cmdStr.Find("className:");
+		end = cmdStr.GetLength();
+		if (begin != -1)
+		{
+			className = cmdStr.Left(end);
+			int idx = className.ReverseFind(':');
+			className = className.Right(className.GetLength() - idx - 1);
+		}
+	}
+
+	if (className != _T(""))
+		m_MainWindowClassName = className;
+
+	//MessageBox(className);
+
+	//释放内存
+	GlobalFree(HGLOBAL(m_lpCommandLine));
+	if (!result)
+	{
+		DeleteDirectory(appPath + _T("\\DownTemp\\"));
+		exit(0);
 		return FALSE;
+	}
 
 	//生成差异文件列表
-	createDownList(m_LoaclAllFileVect, m_DownFileVect);
+	CString versionPath = appPath + _T("\\version.manifest");
+	if (!createDownList(versionPath, m_LoaclAllFileVect, g_DownList))
+	{
+		DeleteDirectory(appPath + _T("\\DownTemp\\"));
+		exit(0);
+		return FALSE;
+	}
 
+	//隐藏本窗口
+	ShowWindow(SW_HIDE);
+	bool isUpdate = false;
 
-	////获取命令行参数 如果不是调用程序特定传入的参数“-XXXX”，则停止运行 2010/1/17
-	//int CommandLineCount = 0;
-	//LPWSTR * m_lpCommandLine = ::CommandLineToArgvW(GetCommandLineW(), &CommandLineCount);
-	//BOOL result = FALSE;
-	//CString cmdStr;
-	////获取参数行命令，并将UNICODE转化成ASCI进行判断
-	//for (int i = CommandLineCount - 1; i >= 0; i--)
-	//{
-	//	cmdStr = m_lpCommandLine[i];
-	//	if (cmdStr == m_LaunchParameters || m_LaunchParameters == _T("null"))//是否是启动参数
-	//	{
-	//		result = TRUE;
-	//		break;
-	//	}
-	//}
+	//获取主窗口句柄
+	CWnd* mainWind = FindWindow(m_MainWindowClassName, NULL);
 
-	////释放内存
-	//GlobalFree(HGLOBAL(m_lpCommandLine));
-	//if (!result)
-	//{
-	//	exit(0);
-	//	return FALSE;
-	//}
+	if (!mainWind)
+	{
+		DeleteDirectory(appPath + _T("\\DownTemp\\"));
+		exit(0);
+		return FALSE;
+	}
 
+	CVersionDlg dlg(m_UpdateMsg, isUpdate, mainWind);
+	dlg.DoModal();
 
-	// 将“关于...”菜单项添加到系统菜单中。
+	//用户选择不更新
+	if (!isUpdate)
+	{
+		DeleteDirectory(appPath + _T("\\DownTemp\\"));
+		exit(0);
+		return FALSE;
+	}
+
+	//更新
+	ShowWindow(SW_SHOW);
 
 	// IDM_ABOUTBOX 必须在系统命令范围内。
 	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
@@ -218,6 +208,7 @@ BOOL CliveUpdateDlg::OnInitDialog()
 		}
 	}
 
+	g_DownAllFileSize = downFileAllSize(g_DownList);
 	m_pThread = AfxBeginThread(downRemoteFile, this);
 
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
@@ -239,23 +230,22 @@ int CliveUpdateDlg::compareVersion(int v1, int v2, int v3, int v4, int v5, int v
 }
 
 //生成下载列表
-void CliveUpdateDlg::createDownList(const vector<NODE>& localVect, std::vector<NODE>& downVect)
+bool CliveUpdateDlg::createDownList(CString verPath,
+	const vector<NODE>& localVect,
+	std::vector<NODE>& downVect)
 {
-	vector<NODE> diff;
-	CString appPath = GetAppPath();
-
-	//对比版本号
-	//1：加载本地版本号
+	//加载本地版本号
+	int v1 = -1, v2 = -1, v3 = -1;
 	FILE* pf = NULL;
-	fopen_s(&pf, appPath + _T("\\version.manifest"), "rb");
-	if (!pf)
-		return;
-
-	int v1, v2, v3;
-	fscanf_s(pf, _T("版本:%d.%d.%d"), &v1, &v2, &v3);
-	fclose(pf);
+	fopen_s(&pf, verPath, "rb");
+	if (pf)
+	{
+		fscanf_s(pf, _T("版本:%d.%d.%d"), &v1, &v2, &v3);
+		fclose(pf);
+	}
 
 	//远程文件下载下来 存放的路径
+	CString appPath = GetAppPath();
 	CString verTemp = appPath + _T("\\DownTemp\\version.manifest");
 	CString proTemp = appPath + _T("\\DownTemp\\project.manifest");
 
@@ -264,7 +254,9 @@ void CliveUpdateDlg::createDownList(const vector<NODE>& localVect, std::vector<N
 		CreateDirectory(appPath + _T("\\DownTemp"), NULL);
 
 	//下载远程version文件
-	HRESULT ret = URLDownloadToFile(NULL, m_VersionUrl, verTemp,0, NULL);
+	CString rd;
+	rd.Format("?abc=%d", time(0));
+	HRESULT ret = URLDownloadToFile(NULL, m_VersionUrl + rd, verTemp, 0, NULL);
 
 	if (S_OK == ret)//下载完毕
 	{
@@ -272,7 +264,7 @@ void CliveUpdateDlg::createDownList(const vector<NODE>& localVect, std::vector<N
 		pf = NULL;
 		fopen_s(&pf, verTemp, "rb");
 		if (!pf)
-			return;
+			return false;
 
 		int v4, v5, v6;
 		fscanf_s(pf, _T("版本:%d.%d.%d"), &v4, &v5, &v6);
@@ -289,29 +281,30 @@ void CliveUpdateDlg::createDownList(const vector<NODE>& localVect, std::vector<N
 				buf[file.GetLength()] = 0;
 				file.Close();
 				m_UpdateMsg = buf;
-				delete []buf;
+				delete[]buf;
 			}
 
-
 			//读取远程文件列表信息
-			ret = URLDownloadToFile(NULL, m_ProjectUrl, proTemp, 0, NULL);
+			rd.Format("?abc=%d", time(0));
+			ret = URLDownloadToFile(NULL, m_ProjectUrl + rd, proTemp, 0, NULL);
 			if (S_OK == ret)//下载完毕
 			{
 				//读取
 				pf = NULL;
 				fopen_s(&pf, proTemp, "rb");
 				if (!pf)
-					return;
+					return false;
 
-				char buf[5][64];
+				char buf[6][64];
 				int count = 0;
-				fscanf_s(pf, _T("远程packageUrl地址:%s"), buf[0], 64);
+				fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 64);
 				fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 64);
 				fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 64);
 				fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[3], 64);
-				fscanf_s(pf, _T("\r\n启动参数:%s"), buf[4], 64);
+				fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[4], 64);
+				fscanf_s(pf, _T("\r\n启动参数:%s"), buf[5], 64);
 				fscanf_s(pf, _T("\r\n清单文件数量:%d"), &count);
-
+			
 				//远程文件信息列表
 				vector<NODE> remoteVect;
 				for (int i = 0; i < count; ++i)
@@ -342,47 +335,39 @@ void CliveUpdateDlg::createDownList(const vector<NODE>& localVect, std::vector<N
 
 					//下载
 					if (down)
-					{
 						downVect.push_back(remoteVect[i]);
-					}
 				}
-
 				fclose(pf);
 			}
 		}
 	}
-	else
-	{
-		MessageBox( _T("下载远程文件失败"), _T("提示"), MB_OK);
-	}
+
+	return downVect.size() != 0;
 }
 
 //加载项目配置文件
-BOOL CliveUpdateDlg::LoadProjectManifest(CString filePath)
+BOOL CliveUpdateDlg::LoadProjectManifest(CString filePath, std::vector<NODE>& fileVect)
 {
-	CString appPath = GetAppPath();
 	FILE* pf = NULL;
-	fopen_s(&pf, appPath + _T('\\') + filePath, "rb");
-	if (NULL == pf)
-	{
-		MessageBox(_T("加载配置文件失败"));
-		SendMessage(WM_CLOSE);
+	fopen_s(&pf, filePath, "rb");
+	if (NULL == pf)//没有配置文件，就使用默认ulr下载远程所有的文件覆盖
 		return FALSE;
-	}
 
-	char buf[5][64];
-	fscanf_s(pf, _T("远程packageUrl地址:%s"), buf[0], 64);
+	char buf[6][64];
+	fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 64);
 	fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 64);
 	fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 64);
 	fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[3], 64);
-	fscanf_s(pf, _T("\r\n启动参数:%s"), buf[4], 64);
+	fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[4], 64);
+	fscanf_s(pf, _T("\r\n启动参数:%s"), buf[5], 64);
 	fscanf_s(pf, _T("\r\n清单文件数量:%d"), &m_DetailedCount);
 
 	m_PackUrl = buf[0];
 	m_ProjectUrl = buf[1];
 	m_VersionUrl = buf[2];
-	m_Name = buf[3];
-	m_LaunchParameters = buf[4];
+	m_MainExeFileName = buf[3];
+	m_MainWindowClassName = buf[4];
+	m_LaunchToken = buf[5];
 
 	for (int i = 0; i < (int)m_DetailedCount; ++i)
 	{
@@ -393,7 +378,7 @@ BOOL CliveUpdateDlg::LoadProjectManifest(CString filePath)
 		fscanf_s(pf, _T("\r\nSize:%d"), &node.size);
 		node.fileUrl = buff[0];
 		node.md5 = buff[1];
-		m_LoaclAllFileVect.push_back(node);
+		fileVect.push_back(node);
 	}
 
 	//关闭文件
@@ -450,8 +435,6 @@ HCURSOR CliveUpdateDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
-
-
 //下载
 void CliveUpdateDlg::OnBnClickedOk()
 {
@@ -468,9 +451,6 @@ void CliveUpdateDlg::OnClose()
 		m_pThread = NULL;
 	}*/
 
-	//删除临时文件
-	CString appPath = GetAppPath();
-	DeleteTempFile(appPath + _T("\\Burster.exe.temp"));
-	
+	DeleteDirectory(GetAppPath() + _T("\\DownTemp\\"));
 	CDialogEx::OnClose();
 }
