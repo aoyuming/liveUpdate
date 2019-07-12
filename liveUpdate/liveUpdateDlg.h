@@ -28,6 +28,7 @@ public:
 	//加载项目配置文件
 	BOOL LoadProjectManifest(CString filePath, std::vector<NODE>& fileVect);
 
+	CString m_OldUpdateMsgUrl;//历史更新信息地址
 	CString m_MainWindowClassName;//主窗口注册类名
 	CString m_LaunchToken;//启动token
 	CString m_MainExeFileName;//主程序名字

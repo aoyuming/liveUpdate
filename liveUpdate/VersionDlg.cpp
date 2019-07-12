@@ -44,7 +44,7 @@ BOOL CVersionDlg::OnInitDialog()
 	CDialogEx::OnInitDialog();
 
 	GetDlgItem(IDC_EDIT1)->SetWindowText(m_UpdateMsg);
-	GetDlgItem(IDC_EDIT1)->EnableWindow(FALSE);
+	((CEdit*)GetDlgItem(IDC_EDIT1))->SetSel(1, false);
 
 	// TODO:  在此添加额外的初始化
 

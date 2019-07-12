@@ -17,9 +17,10 @@
 #define new DEBUG_NEW
 #endif
 
-#define DEFAULT_PROJECT_URL _T("http://129.226.48.122/burster/test/project.manifest")
-#define DEFAULT_VERSION_URL _T("http://129.226.48.122/burster/test/version.manifest")
-#define DEFAULT_PACK_URL _T("http://129.226.48.122/burster/test/")
+#define DEFAULT_PROJECT_URL _T("https://burster-update.oss-cn-beijing.aliyuncs.com/pack/project.manifest")
+#define DEFAULT_VERSION_URL _T("https://burster-update.oss-cn-beijing.aliyuncs.com/pack/version.manifest")
+#define DEFAULT_PACK_URL _T("https://burster-update.oss-cn-beijing.aliyuncs.com/pack/")
+#define DEFAULT_OLD_URL _T("https://burster-update.oss-cn-beijing.aliyuncs.com/version/")
 #define DEFAULT_TOKEN _T("fzq_update")
 #define DEFAULT_EXENAME _T("Burster.exe")
 #define DEFAULT_CLASSNAME _T("fzq")
@@ -102,6 +103,7 @@ BOOL CliveUpdateDlg::OnInitDialog()
 	m_LaunchToken = DEFAULT_TOKEN;
 	m_MainExeFileName = DEFAULT_EXENAME;
 	m_MainWindowClassName = DEFAULT_CLASSNAME;
+	m_OldUpdateMsgUrl = DEFAULT_OLD_URL;
 
 	//读取配置文件信息
 	CString appPath = GetAppPath();
@@ -280,8 +282,42 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 				file.Read(buf, file.GetLength());
 				buf[file.GetLength()] = 0;
 				file.Close();
-				m_UpdateMsg = buf;
+				m_UpdateMsg += buf;
+				m_UpdateMsg += _T("\r\n\r\n");
 				delete[]buf;
+			}
+
+			int begin = v1 * 100 + v2 * 10 + v3;
+			int end = v4 * 100 + v5 * 10 + v6;
+			for (int i = end - 1; i > begin; --i)
+			{
+				CString t;
+				t.Format(_T("%d.manifest"), i);
+				CString url = m_OldUpdateMsgUrl + _T("version_");
+				url += t;
+
+				CString savePath = appPath + _T("\\DownTemp\\version_");
+				savePath += t;
+				rd.Format("?abc=%d", time(0));
+				ret = URLDownloadToFile(NULL, url + rd, savePath, 0, NULL);
+				if (S_OK == ret)//下载完毕
+				{
+					//读取新版本更新的东西
+					CFile file;
+					if (file.Open(savePath, CFile::modeRead))
+					{
+						char* buf = new char[file.GetLength() + 1];
+						file.Read(buf, file.GetLength());
+						buf[file.GetLength()] = 0;
+						file.Close();
+						m_UpdateMsg += buf;
+						m_UpdateMsg += _T("\r\n\r\n");
+						delete[]buf;
+
+						//删除文件
+						CFile::Remove(savePath);
+					}
+				}
 			}
 
 			//读取远程文件列表信息
@@ -295,14 +331,15 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 				if (!pf)
 					return false;
 
-				char buf[6][64];
 				int count = 0;
-				fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 64);
-				fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 64);
-				fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 64);
-				fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[3], 64);
-				fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[4], 64);
-				fscanf_s(pf, _T("\r\n启动参数:%s"), buf[5], 64);
+				char buf[7][256];
+				fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 256);
+				fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 256);
+				fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 256);
+				fscanf_s(pf, _T("\r\n历史更新信息地址:%s"), buf[3], 256);
+				fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[4], 256);
+				fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[5], 256);
+				fscanf_s(pf, _T("\r\n启动参数:%s"), buf[6], 256);
 				fscanf_s(pf, _T("\r\n清单文件数量:%d"), &count);
 			
 				//远程文件信息列表
@@ -353,21 +390,27 @@ BOOL CliveUpdateDlg::LoadProjectManifest(CString filePath, std::vector<NODE>& fi
 	if (NULL == pf)//没有配置文件，就使用默认ulr下载远程所有的文件覆盖
 		return FALSE;
 
-	char buf[6][64];
-	fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 64);
-	fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 64);
-	fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 64);
-	fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[3], 64);
-	fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[4], 64);
-	fscanf_s(pf, _T("\r\n启动参数:%s"), buf[5], 64);
+	char buf[7][256];
+	fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 256);
+	fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 256);
+	fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 256);
+	fscanf_s(pf, _T("\r\n历史更新信息地址:%s"), buf[3], 256);
+	fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[4], 256);
+	fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[5], 256);
+	fscanf_s(pf, _T("\r\n启动参数:%s"), buf[6], 256);
 	fscanf_s(pf, _T("\r\n清单文件数量:%d"), &m_DetailedCount);
 
 	m_PackUrl = buf[0];
 	m_ProjectUrl = buf[1];
 	m_VersionUrl = buf[2];
-	m_MainExeFileName = buf[3];
-	m_MainWindowClassName = buf[4];
-	m_LaunchToken = buf[5];
+	m_MainExeFileName = buf[4];
+
+	if (strcmp(buf[3], _T("null")) == 0)
+		m_OldUpdateMsgUrl = buf[3];
+	if (strcmp(buf[4], _T("null")) == 0)
+		m_MainWindowClassName = buf[5];
+	if (strcmp(buf[6], _T("null")) == 0)
+		m_LaunchToken = buf[6];
 
 	for (int i = 0; i < (int)m_DetailedCount; ++i)
 	{
