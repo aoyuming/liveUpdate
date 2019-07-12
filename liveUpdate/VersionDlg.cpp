@@ -33,6 +33,7 @@ void CVersionDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CVersionDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON1, &CVersionDlg::OnBnClickedButton1)
 	ON_BN_CLICKED(IDC_BUTTON2, &CVersionDlg::OnBnClickedButton2)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -42,6 +43,8 @@ END_MESSAGE_MAP()
 BOOL CVersionDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
+
+	this->SetWindowPos(&wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);//使窗口总是在最前面
 
 	GetDlgItem(IDC_EDIT1)->SetWindowText(m_UpdateMsg);
 	((CEdit*)GetDlgItem(IDC_EDIT1))->SetSel(1, false);
@@ -68,4 +71,12 @@ void CVersionDlg::OnBnClickedButton2()
 	// TODO: 在此添加控件通知处理程序代码
 	m_isUpdate = false;
 	SendMessage(WM_CLOSE);
+}
+
+
+void CVersionDlg::OnClose()
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	CDialogEx::OnClose();
 }

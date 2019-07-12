@@ -90,6 +90,8 @@ BOOL CliveUpdateDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	this->SetWindowPos(&wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);//使窗口总是在最前面
+
 	::CreateMutex(NULL, TRUE, "分组器自动更新程序");//字符串里面的内容可以随便改.他只是一个名字
 	if (GetLastError() == ERROR_ALREADY_EXISTS)
 	{
@@ -237,7 +239,7 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 	std::vector<NODE>& downVect)
 {
 	//加载本地版本号
-	int v1 = -1, v2 = -1, v3 = -1;
+	int v1 = 0, v2 = 0, v3 = 0;
 	FILE* pf = NULL;
 	fopen_s(&pf, verPath, "rb");
 	if (pf)
