@@ -6,6 +6,7 @@
 #include "afxcmn.h"
 #include "afxwin.h"
 #include "global.h"
+#include "agreement.h"
 
 
 // CliveUpdateDlg 对话框
@@ -27,7 +28,7 @@ public:
 
 	//加载项目配置文件
 	BOOL LoadProjectManifest(CString filePath, std::vector<NODE>& fileVect);
-
+	UpdateMode m_LiveUpdateMode;//检查更新的方式
 	CString m_OldUpdateMsgUrl;//历史更新信息地址
 	CString m_MainWindowClassName;//主窗口注册类名
 	CString m_LaunchToken;//启动token

@@ -1,5 +1,4 @@
-﻿
-// liveUpdateDlg.cpp : 实现文件
+﻿// liveUpdateDlg.cpp : 实现文件
 //
 
 #include "stdafx.h"
@@ -8,7 +7,6 @@
 #include "afxdialogex.h"
 #include  <afxinet.h>
 #include "BindStatusCallback.h"
-#include <assert.h>
 #include "VersionDlg.h"
 
 #pragma comment(lib,"Shlwapi.lib") //如果没有这行，会出现link错误
@@ -24,7 +22,6 @@
 #define DEFAULT_TOKEN _T("fzq_update")
 #define DEFAULT_EXENAME _T("Burster.exe")
 #define DEFAULT_CLASSNAME _T("fzq")
-
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -99,6 +96,10 @@ BOOL CliveUpdateDlg::OnInitDialog()
 		return FALSE;
 	}
 
+	srand((unsigned int)time(0));
+	
+	CString appPath = GetAppPath();
+	m_LiveUpdateMode = INVARIABLY;
 	m_ProjectUrl = DEFAULT_PROJECT_URL;
 	m_VersionUrl = DEFAULT_VERSION_URL;
 	m_PackUrl = DEFAULT_PACK_URL;
@@ -108,9 +109,8 @@ BOOL CliveUpdateDlg::OnInitDialog()
 	m_OldUpdateMsgUrl = DEFAULT_OLD_URL;
 
 	//读取配置文件信息
-	CString appPath = GetAppPath();
 	LoadProjectManifest(appPath + _T("\\project.manifest"), m_LoaclAllFileVect);
-	
+
 	//获取命令行参数 如果不是调用程序特定传入的参数“-XXXX”，则停止运行
 	int CommandLineCount = 0;
 	LPWSTR * m_lpCommandLine = ::CommandLineToArgvW(GetCommandLineW(), &CommandLineCount);
@@ -154,6 +154,14 @@ BOOL CliveUpdateDlg::OnInitDialog()
 	{
 		DeleteDirectory(appPath + _T("\\DownTemp\\"));
 		exit(0);
+	}
+
+	//得到主窗口
+	CWnd* mainWind = FindWindow(m_MainWindowClassName, NULL);
+
+	if (!mainWind)
+	{
+		exit(0);
 		return FALSE;
 	}
 
@@ -162,25 +170,22 @@ BOOL CliveUpdateDlg::OnInitDialog()
 	if (!createDownList(versionPath, m_LoaclAllFileVect, g_DownList))
 	{
 		DeleteDirectory(appPath + _T("\\DownTemp\\"));
+		CString sendMsg = _T("已是最新版本!");
+		COPYDATASTRUCT cpd;                     // 给COPYDATASTRUCT结构赋值
+		cpd.dwData = 0;
+		cpd.cbData = sendMsg.GetLength();
+		cpd.lpData = (void*)sendMsg.GetBufferSetLength(cpd.cbData);
+		mainWind->SendMessage(WM_COPYDATA, NULL, (LPARAM)&cpd);// 发送
 		exit(0);
 		return FALSE;
 	}
 
 	//隐藏本窗口
 	ShowWindow(SW_HIDE);
+
+	////获取主窗口句柄
 	bool isUpdate = false;
-
-	//获取主窗口句柄
-	CWnd* mainWind = FindWindow(m_MainWindowClassName, NULL);
-
-	if (!mainWind)
-	{
-		DeleteDirectory(appPath + _T("\\DownTemp\\"));
-		exit(0);
-		return FALSE;
-	}
-
-	CVersionDlg dlg(m_UpdateMsg, isUpdate, mainWind);
+	CVersionDlg dlg(m_UpdateMsg, isUpdate, m_LiveUpdateMode, mainWind);
 	dlg.DoModal();
 
 	//用户选择不更新
@@ -285,7 +290,6 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 				buf[file.GetLength()] = 0;
 				file.Close();
 				m_UpdateMsg += buf;
-				m_UpdateMsg += _T("\r\n\r\n");
 				delete[]buf;
 			}
 
@@ -312,8 +316,10 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 						file.Read(buf, file.GetLength());
 						buf[file.GetLength()] = 0;
 						file.Close();
-						m_UpdateMsg += buf;
-						m_UpdateMsg += _T("\r\n\r\n");
+						CString s = buf;
+						int idx = s.Find(_T("\r\n"));
+						if (idx != -1)
+							m_UpdateMsg += s.Right(s.GetLength() - idx);
 						delete[]buf;
 
 						//删除文件

@@ -189,6 +189,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="agreement.h" />
     <ClInclude Include="BindStatusCallback.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="liveUpdateDlg.h" />

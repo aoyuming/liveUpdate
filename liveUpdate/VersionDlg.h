@@ -2,6 +2,8 @@
 
 
 // CVersionDlg 对话框
+#include "global.h"
+#include "agreement.h"
 
 class CVersionDlg : public CDialogEx
 {
@@ -11,7 +13,8 @@ public:
 	CString m_UpdateMsg;//更新信息
 	bool& m_isUpdate;//是否更新
 	CWnd* m_MainWindow;//主程序窗口句柄
-	CVersionDlg(CString msg, bool& update, CWnd* mainWind = NULL, CWnd* pParent = NULL);   // 标准构造函数
+	UpdateMode m_Mode;
+	CVersionDlg(CString msg, bool& update, UpdateMode mode, CWnd* mainWind = NULL, CWnd* pParent = NULL);   // 标准构造函数
 	virtual ~CVersionDlg();
 
 // 对话框数据
