@@ -37,7 +37,8 @@
 #include <afxsock.h>            // MFC Ì×½Ó×ÖÀ©Õ¹
 
 
-
+#include "SkinH.h"
+#pragma comment(lib, "Skinh.lib")
 
 
 

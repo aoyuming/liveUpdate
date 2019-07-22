@@ -87,6 +87,9 @@ BOOL CliveUpdateDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	//界面美化
+	SkinH_Attach();
+
 	this->SetWindowPos(&wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);//使窗口总是在最前面
 
 	::CreateMutex(NULL, TRUE, "分组器自动更新程序");//字符串里面的内容可以随便改.他只是一个名字
@@ -156,7 +159,7 @@ BOOL CliveUpdateDlg::OnInitDialog()
 		exit(0);
 	}
 
-	//得到主窗口
+	//获取主窗口句柄
 	CWnd* mainWind = FindWindow(m_MainWindowClassName, NULL);
 
 	if (!mainWind)
@@ -180,12 +183,20 @@ BOOL CliveUpdateDlg::OnInitDialog()
 		return FALSE;
 	}
 
+	if (!IsWindow(mainWind->m_hWnd))
+	{
+		DeleteDirectory(appPath + _T("\\DownTemp\\"));
+		exit(0);
+		return FALSE;
+	}
+
 	//隐藏本窗口
 	ShowWindow(SW_HIDE);
 
-	////获取主窗口句柄
+	//创建更新信息窗口
 	bool isUpdate = false;
 	CVersionDlg dlg(m_UpdateMsg, isUpdate, m_LiveUpdateMode, mainWind);
+
 	dlg.DoModal();
 
 	//用户选择不更新

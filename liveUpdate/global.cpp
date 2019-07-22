@@ -189,7 +189,16 @@ UINT downRemoteFile(LPVOID lpParam)
 		CString s2 = s1.Left(i1);
 		CreateMultiDirectory(s2);
 		if (PathFileExists(s1))
+		{
+			int i2 = s1.ReverseFind('.');
+			if (i2 != -1)
+			{
+				CString hz = s1.Right(s1.GetLength() - i2);
+				if (hz == ".dll")
+					continue;
+			}
 			CFile::Remove(s1);
+		}
 		MoveFile(downlist[i], s1);
 	}
 
