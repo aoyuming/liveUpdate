@@ -309,10 +309,8 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 			for (int i = end - 1; i > begin; --i)
 			{
 				CString t;
-				t.Format(_T("%d.manifest"), i);
-				CString url = m_OldUpdateMsgUrl + _T("version_");
-				url += t;
-
+				t.Format(_T("version_%d.manifest"), i);
+				CString url = m_OldUpdateMsgUrl + t;
 				CString savePath = appPath + _T("\\DownTemp\\version_");
 				savePath += t;
 				rd.Format("?abc=%d", time(0));
@@ -351,14 +349,14 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 					return false;
 
 				int count = 0;
-				char buf[7][256];
-				fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 256);
-				fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 256);
-				fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 256);
-				fscanf_s(pf, _T("\r\n历史更新信息地址:%s"), buf[3], 256);
-				fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[4], 256);
-				fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[5], 256);
-				fscanf_s(pf, _T("\r\n启动参数:%s"), buf[6], 256);
+				char buf[7][MAX_PATH];
+				fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], MAX_PATH);
+				fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], MAX_PATH);
+				fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], MAX_PATH);
+				fscanf_s(pf, _T("\r\n历史更新信息地址:%s"), buf[3], MAX_PATH);
+				fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[4], MAX_PATH);
+				fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[5], MAX_PATH);
+				fscanf_s(pf, _T("\r\n启动参数:%s"), buf[6], MAX_PATH);
 				fscanf_s(pf, _T("\r\n清单文件数量:%d"), &count);
 			
 				//远程文件信息列表
@@ -366,14 +364,15 @@ bool CliveUpdateDlg::createDownList(CString verPath,
 				for (int i = 0; i < count; ++i)
 				{
 					NODE node;
-					char buff[2][64];
-					fscanf_s(pf, _T("\r\n文件url:%s"), buff[0], 64);
-					fscanf_s(pf, _T("\r\nMd5:%s"), buff[1], 64);
+					char buff[2][MAX_PATH];
+					fscanf_s(pf, _T("\r\n文件url:%s"), buff[0], MAX_PATH);
+					fscanf_s(pf, _T("\r\nMd5:%s"), buff[1], MAX_PATH);
 					fscanf_s(pf, _T("\r\nSize:%d"), &node.size);
 					node.fileUrl = buff[0];
 					node.md5 = buff[1];
 					remoteVect.push_back(node);
 				}
+
 
 				//比较差异
 				for (int i = 0; i < (int)remoteVect.size(); ++i)
@@ -409,14 +408,14 @@ BOOL CliveUpdateDlg::LoadProjectManifest(CString filePath, std::vector<NODE>& fi
 	if (NULL == pf)//没有配置文件，就使用默认ulr下载远程所有的文件覆盖
 		return FALSE;
 
-	char buf[7][256];
-	fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], 256);
-	fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], 256);
-	fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], 256);
-	fscanf_s(pf, _T("\r\n历史更新信息地址:%s"), buf[3], 256);
-	fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[4], 256);
-	fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[5], 256);
-	fscanf_s(pf, _T("\r\n启动参数:%s"), buf[6], 256);
+	char buf[7][MAX_PATH];
+	fscanf_s(pf, _T("\r\n远程packageUrl地址:%s"), buf[0], MAX_PATH);
+	fscanf_s(pf, _T("\r\n远程project.manifest地址:%s"), buf[1], MAX_PATH);
+	fscanf_s(pf, _T("\r\n远程version.manifest地址:%s"), buf[2], MAX_PATH);
+	fscanf_s(pf, _T("\r\n历史更新信息地址:%s"), buf[3], MAX_PATH);
+	fscanf_s(pf, _T("\r\n主程序名字:%s"), buf[4], MAX_PATH);
+	fscanf_s(pf, _T("\r\n主窗口注册类名:%s"), buf[5], MAX_PATH);
+	fscanf_s(pf, _T("\r\n启动参数:%s"), buf[6], MAX_PATH);
 	fscanf_s(pf, _T("\r\n清单文件数量:%d"), &m_DetailedCount);
 
 	m_PackUrl = buf[0];
@@ -434,9 +433,9 @@ BOOL CliveUpdateDlg::LoadProjectManifest(CString filePath, std::vector<NODE>& fi
 	for (int i = 0; i < (int)m_DetailedCount; ++i)
 	{
 		NODE node;
-		char buff[2][64];
-		fscanf_s(pf, _T("\r\n文件url:%s"), buff[0], 64);
-		fscanf_s(pf, _T("\r\nMd5:%s"), buff[1], 64);
+		char buff[2][MAX_PATH];
+		fscanf_s(pf, _T("\r\n文件url:%s"), buff[0], MAX_PATH);
+		fscanf_s(pf, _T("\r\nMd5:%s"), buff[1], MAX_PATH);
 		fscanf_s(pf, _T("\r\nSize:%d"), &node.size);
 		node.fileUrl = buff[0];
 		node.md5 = buff[1];
@@ -505,7 +504,7 @@ void CliveUpdateDlg::OnBnClickedOk()
 
 void CliveUpdateDlg::OnClose()
 {
-	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	// TODO: 在此添加消息处理程序`
 	/*if (m_pThread)
 	{
 		TerminateThread(m_pThread, 1);
