@@ -87,9 +87,6 @@ BOOL CliveUpdateDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	//界面美化
-	SkinH_Attach();
-
 	this->SetWindowPos(&wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);//使窗口总是在最前面
 
 	::CreateMutex(NULL, TRUE, "分组器自动更新程序");//字符串里面的内容可以随便改.他只是一个名字

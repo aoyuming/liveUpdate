@@ -37,8 +37,16 @@ CliveUpdateApp theApp;
 
 // CliveUpdateApp ≥ı ºªØ
 
+int CliveUpdateApp::ExitInstance()
+{
+	skinppExitSkin();
+	return CWinApp::ExitInstance();
+}
+
 BOOL CliveUpdateApp::InitInstance()
 {
+	skinppLoadSkin(_T("Devoir.ssk"));
+
 	WNDCLASS wc;
 	::GetClassInfo(::AfxGetInstanceHandle(), _T("#32770"), &wc);
 

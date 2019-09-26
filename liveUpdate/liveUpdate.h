@@ -20,6 +20,8 @@ class CliveUpdateApp : public CWinApp
 public:
 	CliveUpdateApp();
 
+	int ExitInstance();
+
 // ÖØÐ´
 public:
 	virtual BOOL InitInstance();

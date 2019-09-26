@@ -42,7 +42,7 @@
     <ClInclude Include="agreement.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="SkinH.h">
+    <ClInclude Include="liveUpdate.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
